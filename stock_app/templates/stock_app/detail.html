@@ -1,0 +1,295 @@
+{% extends 'stock_app/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ analysis.symbol }} - Stock Analysis{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item active">{{ analysis.symbol }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Current Price Info -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">{{ analysis.symbol }} - Current Price</h5>
+                <button id="favorite-btn" class="btn btn-sm btn-outline-light" data-ticker="{{ analysis.symbol }}"
+                    data-is-favorite="{{ is_favorite|lower }}">
+                    {% if is_favorite %}
+                    <span class="text-warning">&#9733; Remove</span>
+                    {% else %}
+                    <span>&#9734; Add to Favorites</span>
+                    {% endif %}
+                </button>
+            </div>
+            <div class="card-body">
+                <h2 class="text-center">${{ analysis.current_price|floatformat:2 }}</h2>
+                <hr>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>Date:</strong></td>
+                        <td>{{ analysis.date }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Open:</strong></td>
+                        <td>${{ analysis.open|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>High:</strong></td>
+                        <td>${{ analysis.high|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Low:</strong></td>
+                        <td>${{ analysis.low|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Volume:</strong></td>
+                        <td>{{ analysis.volume|intcomma }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Technical Indicators -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Technical Indicators</h5>
+            </div>
+            <div class="card-body">
+                <h6>MACD (20-day)</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>MACD Line:</strong></td>
+                        <td>{{ analysis.macd|floatformat:4 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Signal Line:</strong></td>
+                        <td>{{ analysis.signal|floatformat:4 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Histogram:</strong></td>
+                        <td>{{ analysis.histogram|floatformat:4 }}</td>
+                    </tr>
+                </table>
+
+                <hr>
+
+                <h6>RSI (14-day)</h6>
+                <table class="table table-sm">
+                    <tr>
+                        <td><strong>RSI Value:</strong></td>
+                        <td>{{ analysis.rsi|floatformat:2 }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>
+                            {% if analysis.rsi < 30 %} <span class="text-success">Oversold</span>
+                                {% elif analysis.rsi > 70 %}
+                                <span class="text-danger">Overbought</span>
+                                {% else %}
+                                <span class="text-muted">Neutral</span>
+                                {% endif %}
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recommendation -->
+    <div class="col-md-4">
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">Recommendation</h5>
+            </div>
+            <div class="card-body text-center">
+                <h1
+                    class="{% if analysis.recommendation == 'BUY' %}recommendation-buy{% elif analysis.recommendation == 'SELL' %}recommendation-sell{% else %}recommendation-hold{% endif %}">
+                    {{ analysis.recommendation }}
+                </h1>
+                <hr>
+                <p class="text-muted">
+                    Based on MACD crossover and RSI analysis:<br>
+                    - RSI {{ analysis.rsi|floatformat:2 }} (oversold <30, overbought>70)<br>
+                        - MACD {{ analysis.macd|floatformat:4 }} vs Signal {{ analysis.signal|floatformat:4 }}
+                </p>
+                <a href="{% url 'home' %}" class="btn btn-outline-primary">Analyze Another Stock</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Price History Chart -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Price History Chart</h5>
+            </div>
+            <div class="card-body">
+                <canvas id="priceChart" height="80"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent History Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Monthly History</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Open</th>
+                                <th>High</th>
+                                <th>Low</th>
+                                <th>Close</th>
+                                <th>Volume</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day in history %}
+                            <tr>
+                                <td>{{ day.date }}</td>
+                                <td>${{ day.open|floatformat:2 }}</td>
+                                <td>${{ day.high|floatformat:2 }}</td>
+                                <td>${{ day.low|floatformat:2 }}</td>
+                                <td>${{ day.close|floatformat:2 }}</td>
+                                <td>{{ day.volume|intcomma }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.getElementById('favorite-btn').addEventListener('click', function () {
+        const ticker = this.dataset.ticker;
+        const btn = this;
+
+        fetch(`/api/toggle-favorite/${ticker}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update button appearance
+                    if (data.is_favorite) {
+                        btn.innerHTML = '<span class="text-warning">&#9733; Remove</span>';
+                    } else {
+                        btn.innerHTML = '<span>&#9734; Add to Favorites</span>';
+                    }
+
+                    // Show notification
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alertDiv.innerHTML = `
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+                    document.body.appendChild(alertDiv);
+
+                    setTimeout(() => alertDiv.remove(), 3000);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+    });
+</script>
+
+<script>
+    // Convert Django history data to Chart.js format
+    // Data jsou od nejnovějšího po nejstarší, proto je obrátíme pro chronologické zobrazení v grafu
+    const historyData = {{ history| safe }};
+    const labels = historyData.map(d => d.date).reverse();
+    const closePrices = historyData.map(d => d.close).reverse();
+
+    // Create chart
+    const ctx = document.getElementById('priceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Close Price ($)',
+                data: closePrices,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1,
+                fill: true,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function (context) {
+                            return 'Price: $' + context.parsed.y.toFixed(2);
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Date'
+                    }
+                },
+                y: {
+                    display: true,
+                    title: {
+                        display: true,
+                        text: 'Price ($)'
+                    },
+                    beginAtZero: false
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
+</script>
+{% endblock %}
