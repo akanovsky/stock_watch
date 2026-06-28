@@ -44,24 +44,52 @@
         </div>
 
         <!-- Favorites List -->
+        {% if user.is_authenticated %}
         {% if favorites %}
         <div class="card mt-4">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0">&#9733; Favorites</h5>
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">&#9733; My Favorites</h5>
+                <form method="post" class="mb-0">
+                    {% csrf_token %}
+                    <button type="submit" name="refresh_favorites" value="1" class="btn btn-sm btn-outline-dark">
+                        &#x21bb; Refresh
+                    </button>
+                </form>
             </div>
             <div class="card-body">
                 <div class="list-group">
                     {% for fav in favorites %}
                     <div class="list-group-item d-flex justify-content-between align-items-center">
-                        <a href="{% url 'stock_detail' ticker=fav.ticker.symbol %}" class="text-decoration-none">
-                            <strong>{{ fav.ticker.symbol }}</strong>
-                            <small class="text-muted d-block">Added: {{ fav.added_at|date:"M d, Y" }}</small>
+                        <a href="{% url 'stock_detail' ticker=fav.favorite.ticker.symbol %}"
+                            class="text-decoration-none">
+                            <strong>{{ fav.favorite.ticker.symbol }}</strong>
+                            <small class="text-muted d-block">Added: {{ fav.favorite.added_at|date:"M d, Y" }}</small>
+                            {% if fav.analysis %}
+                            <small class="d-block mt-1">
+                                <span class="badge
+                                    {% if fav.analysis.recommendation == 'BUY' %}bg-success
+                                    {% elif fav.analysis.recommendation == 'SELL' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ fav.analysis.recommendation }}
+                                </span>
+                                <span class="badge
+                                    {% if fav.analysis.rsi < 30 %}bg-success
+                                    {% elif fav.analysis.rsi > 70 %}bg-danger
+                                    {% else %}bg-info{% endif %}">
+                                    {% if fav.analysis.rsi < 30 %}Oversold {% elif fav.analysis.rsi > 70 %}Overbought
+                                        {% else %}Neutral{% endif %}
+                                </span>
+                                <span class="text-muted">RSI: {{ fav.analysis.rsi|floatformat:2 }}</span>
+                            </small>
+                            {% else %}
+                            <small class="text-muted d-block">Analysis unavailable</small>
+                            {% endif %}
                         </a>
-                        <form action="{% url 'remove_favorite' ticker=fav.ticker.symbol %}" method="post"
+                        <form action="{% url 'remove_favorite' ticker=fav.favorite.ticker.symbol %}" method="post"
                             class="d-inline">
                             {% csrf_token %}
                             <button type="submit" class="btn btn-sm btn-outline-danger"
-                                onclick="return confirm('Remove {{ fav.ticker.symbol }} from favorites?')">
+                                onclick="return confirm('Remove {{ fav.favorite.ticker.symbol }} from favorites?')">
                                 &times;
                             </button>
                         </form>
@@ -69,6 +97,20 @@
                     {% endfor %}
                 </div>
             </div>
+        </div>
+        {% else %}
+        <div class="alert alert-info mt-4">
+            <p class="mb-2"><strong>&#9733; Favorites</strong></p>
+            <p class="mb-0">You need to <a href="{% url 'login' %}">login</a> to save your favorite stocks.</p>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="alert alert-info mt-4">
+            <p class="mb-2"><strong>&#9733; Favorites</strong></p>
+            <p class="mb-0">
+                <a href="{% url 'login' %}">Login</a> or <a href="{% url 'register' %}">register</a> to save your
+                favorite stocks.
+            </p>
         </div>
         {% endif %}
 

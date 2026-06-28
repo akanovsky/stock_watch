@@ -1,0 +1,152 @@
+{% extends 'stock_app/base.html' %}
+
+{% block title %}{{ portfolio.name }} - Portfolio{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="d-flex justify-content-between align-items-center mt-4 mb-3">
+            <h2 class="mb-0">{{ portfolio.name }}</h2>
+            <a href="{% url 'portfolio_list' %}" class="btn btn-outline-secondary btn-sm">Back to portfolios</a>
+        </div>
+
+        {% if portfolio.description %}
+        <p class="text-muted">{{ portfolio.description }}</p>
+        {% endif %}
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Invested</h6>
+                        <h4>${{ portfolio.total_invested|floatformat:2 }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Current Value</h6>
+                        <h4>${{ portfolio.total_value|floatformat:2 }}</h4>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h6 class="text-muted">Profit / Loss</h6>
+                        <h4
+                            class="{% if portfolio.total_profit_loss >= 0 %}recommendation-buy{% else %}recommendation-sell{% endif %}">
+                            ${{ portfolio.total_profit_loss|floatformat:2 }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Add Stock to Portfolio</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" class="row g-3">
+                    {% csrf_token %}
+
+                    {% if form.non_field_errors %}
+                    <div class="col-12">
+                        <div class="alert alert-danger">
+                            {% for error in form.non_field_errors %}
+                            {{ error }}
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="col-md-4">
+                        <label for="{{ form.symbol.id_for_label }}" class="form-label">Ticker Symbol</label>
+                        {{ form.symbol }}
+                        {% if form.symbol.errors %}
+                        <div class="text-danger small">{{ form.symbol.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="{{ form.quantity.id_for_label }}" class="form-label">Quantity</label>
+                        {{ form.quantity }}
+                        {% if form.quantity.errors %}
+                        <div class="text-danger small">{{ form.quantity.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-3">
+                        <label for="{{ form.purchase_price.id_for_label }}" class="form-label">Purchase Price</label>
+                        {{ form.purchase_price }}
+                        {% if form.purchase_price.errors %}
+                        <div class="text-danger small">{{ form.purchase_price.errors }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="submit" class="btn btn-success w-100">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <h4 class="mb-3">Holdings</h4>
+        {% if portfolio.items.all %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Ticker</th>
+                        <th>Quantity</th>
+                        <th>Purchase Price</th>
+                        <th>Purchase Date</th>
+                        <th>Current Price</th>
+                        <th>Total Cost</th>
+                        <th>Current Value</th>
+                        <th>P/L</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in portfolio.items.all %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'stock_detail' ticker=item.ticker.symbol %}"
+                                class="text-decoration-none fw-bold">
+                                {{ item.ticker.symbol }}
+                            </a>
+                        </td>
+                        <td>{{ item.quantity|floatformat:4 }}</td>
+                        <td>${{ item.purchase_price|floatformat:2 }}</td>
+                        <td>{{ item.purchase_date|date:"Y-m-d" }}</td>
+                        <td>${{ item.current_price|floatformat:2 }}</td>
+                        <td>${{ item.total_cost|floatformat:2 }}</td>
+                        <td>${{ item.current_value|floatformat:2 }}</td>
+                        <td
+                            class="{% if item.profit_loss >= 0 %}recommendation-buy{% else %}recommendation-sell{% endif %}">
+                            ${{ item.profit_loss|floatformat:2 }}
+                        </td>
+                        <td>
+                            <form action="{% url 'portfolio_item_delete' pk=portfolio.pk item_pk=item.pk %}"
+                                method="post" class="d-inline">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                    onclick="return confirm('Sell / remove {{ item.ticker.symbol }} from portfolio?')">Sell</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="alert alert-info">
+            This portfolio is empty. Use the form above to add your first stock.
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

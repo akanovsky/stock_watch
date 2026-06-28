@@ -20,6 +20,8 @@ services:
   db:
     image: postgres:15-alpine
     container_name: stock_watch_db
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${DB_NAME:-stock_db}
       POSTGRES_USER: ${DB_USER:-postgres}

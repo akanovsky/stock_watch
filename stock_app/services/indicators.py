@@ -121,30 +121,54 @@ def analyze_stock(ticker_symbol: str) -> dict:
     Returns:
         Dictionary with analysis results
     """
+    import yfinance as yf
     from .yfinance_service import fetch_monthly_data
 
     df = fetch_monthly_data(ticker_symbol)
+
+    # Get company name from yfinance with multiple fallback strategies
+    try:
+        ticker_obj = yf.Ticker(ticker_symbol)
+        ticker_info = ticker_obj.info
+        # Try multiple possible fields for company name
+        company_name = ticker_info.get('longName') or ticker_info.get('shortName') or ticker_info.get('name') or ticker_symbol
+    except Exception:
+        company_name = ticker_symbol
 
     # Calculate indicators
     df = calculate_macd(df)
     df = calculate_rsi(df)
 
-    latest = df.iloc[-1]
+    # Use the last row with valid Close price (skip today if market not closed yet)
+    valid_df = df[df['Close'].notna()]
+    if valid_df.empty:
+        raise ValueError(f"No valid price data for ticker: {ticker_symbol}")
+    latest = valid_df.iloc[-1]
 
     # Get recommendation
     recommendation = get_recommendation(df, latest['RSI'])
 
+    import math
+
+    def safe_float(value):
+        """Convert NaN/Inf to None for template display."""
+        f = float(value)
+        if math.isnan(f) or math.isinf(f):
+            return None
+        return f
+
     return {
         'symbol': ticker_symbol,
-        'current_price': float(latest['Close']),
-        'low': float(latest['Low']),
-        'high': float(latest['High']),
-        'open': float(latest['Open']),
-        'volume': int(latest['Volume']),
+        'company_name': company_name,
+        'current_price': safe_float(latest['Close']),
+        'low': safe_float(latest['Low']),
+        'high': safe_float(latest['High']),
+        'open': safe_float(latest['Open']),
+        'volume': int(latest['Volume']) if not math.isnan(latest['Volume']) else 0,
         'date': latest.name.strftime('%Y-%m-%d') if hasattr(latest.name, 'strftime') else str(latest.name),
-        'macd': float(latest['MACD']),
-        'signal': float(latest['Signal']),
-        'histogram': float(latest['Histogram']),
-        'rsi': float(latest['RSI']),
+        'macd': safe_float(latest['MACD']),
+        'signal': safe_float(latest['Signal']),
+        'histogram': safe_float(latest['Histogram']),
+        'rsi': safe_float(latest['RSI']),
         'recommendation': recommendation
     }
