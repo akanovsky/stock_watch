@@ -47,13 +47,14 @@ def get_current_low_high(ticker_symbol: str) -> dict:
         raise ValueError(f"No valid price data for ticker: {ticker_symbol}")
     latest = valid_rows.iloc[-1]
 
+    name = latest.name
     return {
         'low': safe_float(latest['Low']),
         'high': safe_float(latest['High']),
         'close': safe_float(latest['Close']),
         'open': safe_float(latest['Open']),
         'volume': safe_int(latest['Volume']),
-        'date': latest.name.strftime('%Y-%m-%d') if hasattr(latest.name, 'strftime') else str(latest.name)
+        'date': name.strftime('%Y-%m-%d') if isinstance(name, datetime) else str(name)
     }
 
 
@@ -98,7 +99,7 @@ def get_full_monthly_history(ticker_symbol: str) -> list[dict]:
         if close_price == 0:
             continue
         history.append({
-            'date': date.strftime('%Y-%m-%d') if hasattr(date, 'strftime') else str(date),
+            'date': date.strftime('%Y-%m-%d') if isinstance(date, datetime) else str(date),
             'open': safe_float(row['Open']),
             'high': safe_float(row['High']),
             'low': safe_float(row['Low']),
