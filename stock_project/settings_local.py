@@ -20,7 +20,16 @@ load_dotenv(dotenv_path=BASE_DIR / '.env')  # noqa: F405
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-dev-key-change-in-production')
 DEBUG = os.environ.get('DEBUG', 'True').lower() == 'true'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+
+# CSRF trusted origins: use explicit env value or derive from ALLOWED_HOSTS
+csrf_origins_env = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csrf_origins_env if origin.strip()]
+if not CSRF_TRUSTED_ORIGINS:
+    CSRF_TRUSTED_ORIGINS = [f"http://{host.strip()}" for host in ALLOWED_HOSTS if host.strip() not in ('*', '')]
+
+# Trust forwarded headers from nginx reverse proxy
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Database settings loaded from environment variables
 DATABASES = {
