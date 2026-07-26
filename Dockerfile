@@ -15,12 +15,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Kopie celého projektu
 COPY . .
 
-# Sběr statických souborů
-RUN python manage.py collectstatic --noinput
+# Nastavení entrypoint skriptu
+RUN chmod +x /app/entrypoint.sh
 
 # Export proměnných prostředí
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1
 
-# Spuštění aplikace pomocí gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "4", "stock_project.wsgi:application"]
+# Spuštění aplikace pomocí entrypoint skriptu
+CMD ["/app/entrypoint.sh"]
