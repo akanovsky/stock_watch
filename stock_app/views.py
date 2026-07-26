@@ -359,6 +359,42 @@ class PortfolioDeleteView(View):
 
 
 @method_decorator(login_required, name='dispatch')
+class PortfolioUpdateView(View):
+    """Edit portfolio name and description."""
+
+    def get(self, request, pk):
+        portfolio = get_object_or_404(Portfolio, pk=pk, user=request.user)
+        form = PortfolioForm(initial={
+            'name': portfolio.name,
+            'description': portfolio.description
+        })
+        return render(request, 'stock_app/portfolio_form.html', {
+            'form': form,
+            'portfolio': portfolio,
+            'action': 'Edit'
+        })
+
+    def post(self, request, pk):
+        portfolio = get_object_or_404(Portfolio, pk=pk, user=request.user)
+        form = PortfolioForm(request.POST)
+        if form.is_valid():
+            name = form.cleaned_data['name']
+            if name != portfolio.name and Portfolio.objects.filter(user=request.user, name=name).exists():
+                form.add_error('name', 'You already have a portfolio with this name.')
+            else:
+                portfolio.name = name
+                portfolio.description = form.cleaned_data['description']
+                portfolio.save()
+                messages.success(request, f'Portfolio "{name}" updated.')
+                return redirect('portfolio_detail', pk=pk)
+        return render(request, 'stock_app/portfolio_form.html', {
+            'form': form,
+            'portfolio': portfolio,
+            'action': 'Edit'
+        })
+
+
+@method_decorator(login_required, name='dispatch')
 class PortfolioItemDeleteView(View):
     """Remove a stock from a portfolio."""
 

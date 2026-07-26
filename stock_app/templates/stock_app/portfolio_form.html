@@ -41,7 +41,11 @@
                 </form>
             </div>
             <div class="card-footer text-center">
+                {% if portfolio %}
+                <a href="{% url 'portfolio_detail' pk=portfolio.pk %}">Back to portfolio</a>
+                {% else %}
                 <a href="{% url 'portfolio_list' %}">Back to portfolios</a>
+                {% endif %}
             </div>
         </div>
     </div>
